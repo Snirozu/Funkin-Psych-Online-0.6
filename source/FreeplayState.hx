@@ -1,5 +1,10 @@
 package;
 
+import online.Alert;
+import online.states.Room;
+import haxe.crypto.Md5;
+import online.Waiter;
+import online.GameClient;
 #if desktop
 import Discord.DiscordClient;
 #end
@@ -52,6 +57,14 @@ class FreeplayState extends MusicBeatState
 
 	override function create()
 	{
+		if (GameClient.isConnected()) {
+			GameClient.room.onMessage("log", function(message) {
+				Waiter.put(() -> {
+					Alert.alert("New message", message);
+				});
+			});
+		}
+		
 		//Paths.clearStoredMemory();
 		//Paths.clearUnusedMemory();
 		
@@ -357,35 +370,63 @@ class FreeplayState extends MusicBeatState
 			persistentUpdate = false;
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-			/*#if MODS_ALLOWED
-			if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
-			#else
-			if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
-			#end
-				poop = songLowercase;
-				curDifficulty = 1;
-				trace('Couldnt find file');
-			}*/
-			trace(poop);
 
-			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
-			PlayState.isStoryMode = false;
-			PlayState.storyDifficulty = curDifficulty;
-
-			trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
-			if(colorTween != null) {
-				colorTween.cancel();
+			if (GameClient.isConnected()) {
+				// weird ass
+				GameClient.room.onMessage("checkChart", function(message) {
+					Waiter.put(() -> {
+						try {
+							var hash = Md5.encode(Song.loadRawSong(GameClient.room.state.song, GameClient.room.state.folder));
+							trace("verifying song: " + GameClient.room.state.song + " | " + GameClient.room.state.folder + " : " + hash);
+							GameClient.send("verifyChart", hash);
+							destroyFreeplayVocals();
+							GameClient.clearOnMessage();
+							MusicBeatState.switchState(new Room());
+						}
+						catch (exc) {
+							Sys.println(exc);
+						}
+					});
+				});
+				GameClient.send("setFSD", [
+					songLowercase,
+					poop,
+					curDifficulty,
+					Md5.encode(Song.loadRawSong(poop, songLowercase)),
+					Paths.currentModDirectory
+				]);
 			}
-			
-			if (FlxG.keys.pressed.SHIFT){
-				LoadingState.loadAndSwitchState(new ChartingState());
-			}else{
-				LoadingState.loadAndSwitchState(new PlayState());
-			}
+			else {
+				/*#if MODS_ALLOWED
+				if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
+				#else
+				if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
+				#end
+					poop = songLowercase;
+					curDifficulty = 1;
+					trace('Couldnt find file');
+				}*/
+				trace(poop);
 
-			FlxG.sound.music.volume = 0;
-					
-			destroyFreeplayVocals();
+				PlayState.SONG = Song.loadFromJson(poop, songLowercase);
+				PlayState.isStoryMode = false;
+				PlayState.storyDifficulty = curDifficulty;
+
+				trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
+				if(colorTween != null) {
+					colorTween.cancel();
+				}
+				
+				if (FlxG.keys.pressed.SHIFT){
+					LoadingState.loadAndSwitchState(new ChartingState());
+				}else{
+					LoadingState.loadAndSwitchState(new PlayState());
+				}
+
+				FlxG.sound.music.volume = 0;
+						
+				destroyFreeplayVocals();
+			}
 		}
 		else if(controls.RESET)
 		{

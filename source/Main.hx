@@ -1,5 +1,7 @@
 package;
 
+import online.Waiter;
+import online.Alert;
 import flixel.graphics.FlxGraphic;
 import flixel.FlxG;
 import flixel.FlxGame;
@@ -69,6 +71,8 @@ class Main extends Sprite
 
 	private function setupGame():Void
 	{
+		CoolUtil.setDarkMode(true);
+		
 		var stageWidth:Int = Lib.current.stage.stageWidth;
 		var stageHeight:Int = Lib.current.stage.stageHeight;
 
@@ -102,6 +106,10 @@ class Main extends Sprite
 		#if CRASH_HANDLER
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
 		#end
+
+		addChild(new Alert());
+
+		FlxG.plugins.add(new Waiter());
 	}
 
 	// Code was entirely made by sqirra-rng for their fnf engine named "Izzy Engine", big props to them!!!

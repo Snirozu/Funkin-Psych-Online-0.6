@@ -1,5 +1,6 @@
 package;
 
+import externs.WinAPI;
 import flixel.FlxG;
 import openfl.utils.Assets;
 import lime.utils.Assets as LimeAssets;
@@ -137,5 +138,27 @@ class CoolUtil
 		#else
 		FlxG.openURL(site);
 		#end
+	}
+
+	public static function floorDecimal(value:Float, decimals:Int):Float
+	{
+		if (decimals < 1)
+			return Math.floor(value);
+
+		var tempMult:Float = 1;
+		for (i in 0...decimals)
+			tempMult *= 10;
+
+		var newValue:Float = Math.floor(value * tempMult);
+		return newValue / tempMult;
+	}
+
+	public static function setDarkMode(enabled:Bool) {
+		WinAPI.setDarkMode(getWindowTitle(), enabled);
+	}
+
+	public static function getWindowTitle():String {
+		@:privateAccess var attributes = lime.app.Application.current.window.__attributes;
+		return Reflect.hasField(attributes, "title") ? attributes.title : "Lime Application";
 	}
 }
