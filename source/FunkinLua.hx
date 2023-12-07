@@ -1174,8 +1174,7 @@ class FunkinLua {
 		Lua_helper.add_callback(lua, "doTweenColor", function(tag:String, vars:String, targetColor:String, duration:Float, ease:String) {
 			var penisExam:Dynamic = tweenShit(tag, vars);
 			if(penisExam != null) {
-				var color:Int = Std.parseInt(targetColor);
-				if(!targetColor.startsWith('0x')) color = Std.parseInt('0xff' + targetColor);
+				var color:Int = getColor(targetColor);
 
 				var curColor:FlxColor = penisExam.color;
 				curColor.alphaFloat = penisExam.alpha;
@@ -1404,8 +1403,7 @@ class FunkinLua {
 		});
 
 		Lua_helper.add_callback(lua, "getColorFromHex", function(color:String) {
-			if(!color.startsWith('0x')) color = '0xff' + color;
-			return Std.parseInt(color);
+			return getColor(color);
 		});
 
 		Lua_helper.add_callback(lua, "keyboardJustPressed", function(name:String)
@@ -1637,13 +1635,11 @@ class FunkinLua {
 		});
 
 		Lua_helper.add_callback(lua, "cameraFlash", function(camera:String, color:String, duration:Float,forced:Bool) {
-			var colorNum:Int = Std.parseInt(color);
-			if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+			var colorNum:Int = getColor(color);
 			cameraFromString(camera).flash(colorNum, duration,null,forced);
 		});
 		Lua_helper.add_callback(lua, "cameraFade", function(camera:String, color:String, duration:Float,forced:Bool) {
-			var colorNum:Int = Std.parseInt(color);
-			if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+			var colorNum:Int = getColor(color);
 			cameraFromString(camera).fade(colorNum, duration,false,null,forced);
 		});
 		Lua_helper.add_callback(lua, "setRatingPercent", function(value:Float) {
@@ -1755,8 +1751,7 @@ class FunkinLua {
 		});
 
 		Lua_helper.add_callback(lua, "makeGraphic", function(obj:String, width:Int, height:Int, color:String) {
-			var colorNum:Int = Std.parseInt(color);
-			if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+			var colorNum:Int = getColor(color);
 
 			var spr:FlxSprite = PlayState.instance.getLuaObject(obj,false);
 			if(spr!=null) {
@@ -2007,19 +2002,15 @@ class FunkinLua {
 		});
 
 		Lua_helper.add_callback(lua, "setHealthBarColors", function(leftHex:String, rightHex:String) {
-			var left:FlxColor = Std.parseInt(leftHex);
-			if(!leftHex.startsWith('0x')) left = Std.parseInt('0xff' + leftHex);
-			var right:FlxColor = Std.parseInt(rightHex);
-			if(!rightHex.startsWith('0x')) right = Std.parseInt('0xff' + rightHex);
+			var left:FlxColor = getColor(leftHex);
+			var right:FlxColor = getColor(rightHex);
 
 			PlayState.instance.healthBar.createFilledBar(left, right);
 			PlayState.instance.healthBar.updateBar();
 		});
 		Lua_helper.add_callback(lua, "setTimeBarColors", function(leftHex:String, rightHex:String) {
-			var left:FlxColor = Std.parseInt(leftHex);
-			if(!leftHex.startsWith('0x')) left = Std.parseInt('0xff' + leftHex);
-			var right:FlxColor = Std.parseInt(rightHex);
-			if(!rightHex.startsWith('0x')) right = Std.parseInt('0xff' + rightHex);
+			var left:FlxColor = getColor(leftHex);
+			var right:FlxColor = getColor(rightHex);
 
 			PlayState.instance.timeBar.createFilledBar(right, left);
 			PlayState.instance.timeBar.updateBar();
@@ -2370,8 +2361,7 @@ class FunkinLua {
 			var obj:FlxText = getTextObject(tag);
 			if(obj != null)
 			{
-				var colorNum:Int = Std.parseInt(color);
-				if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+				var colorNum:Int = getColor(color);
 
 				obj.borderSize = size;
 				obj.borderColor = colorNum;
@@ -2384,8 +2374,7 @@ class FunkinLua {
 			var obj:FlxText = getTextObject(tag);
 			if(obj != null)
 			{
-				var colorNum:Int = Std.parseInt(color);
-				if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+				var colorNum:Int = getColor(color);
 
 				obj.color = colorNum;
 				return true;
@@ -2634,8 +2623,7 @@ class FunkinLua {
 		Lua_helper.add_callback(lua, "luaSpriteMakeGraphic", function(tag:String, width:Int, height:Int, color:String) {
 			luaTrace("luaSpriteMakeGraphic is deprecated! Use makeGraphic instead", false, true);
 			if(PlayState.instance.modchartSprites.exists(tag)) {
-				var colorNum:Int = Std.parseInt(color);
-				if(!color.startsWith('0x')) colorNum = Std.parseInt('0xff' + color);
+				var colorNum:Int = getColor(color);
 
 				PlayState.instance.modchartSprites.get(tag).makeGraphic(width, height, colorNum);
 			}
@@ -2771,6 +2759,13 @@ class FunkinLua {
 
 		call('onCreate', []);
 		#end
+	}
+
+	public static function getColor(color:String) {
+		var colorNum:Int = FlxColor.fromString(color);
+		if (!color.startsWith("#") && !color.startsWith("0x") && !FlxColor.colorLookup.exists(color.toUpperCase()))
+			colorNum = FlxColor.fromString("#" + color);
+		return colorNum;
 	}
 
 	public static function isOfTypes(value:Any, types:Array<Dynamic>)
