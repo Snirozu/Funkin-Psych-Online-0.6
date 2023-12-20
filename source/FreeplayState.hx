@@ -388,12 +388,15 @@ class FreeplayState extends MusicBeatState
 						}
 					});
 				});
+				Paths.currentModDirectory = songs[curSelected].folder;
+				trace('Song mod directory: "${Paths.currentModDirectory}"');
 				GameClient.send("setFSD", [
 					songLowercase,
 					poop,
 					curDifficulty,
 					Md5.encode(Song.loadRawSong(poop, songLowercase)),
-					Paths.currentModDirectory
+					Paths.currentModDirectory,
+					online.OnlineMods.getModURL(Paths.currentModDirectory)
 				]);
 			}
 			else {

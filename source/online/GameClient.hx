@@ -1,7 +1,10 @@
 package online;
 
-import flixel.util.FlxTimer;
-import flixel.FlxG;
+import sys.thread.Thread;
+import online.schema.Player;
+import haxe.Http;
+import sys.io.File;
+import sys.FileSystem;
 import online.states.Lobby;
 import io.colyseus.error.MatchMakeError;
 import lime.app.Application;
@@ -162,6 +165,8 @@ class GameClient {
 
 			GameClient.room = null;
 			GameClient.isOwner = false;
+
+			Downloader.cancelAll();
         });
 	}
 
@@ -207,12 +212,51 @@ class GameClient {
 
 	static function set_serverAddress(v:String):String {
 		if (v != null)
-			v = StringTools.trim(v);
+			v = v.trim();
 		if (v == "" || v == _defaultAddress || v == "null")
 			v = null;
 
 		ClientPrefs.serverAddress = v;
 		ClientPrefs.saveSettings();
 		return serverAddress;
+	}
+
+	public static function getPlayerCount(callback:(v:Int) -> Void) {
+		Thread.create(() -> {
+			var swagAddress = serverAddress.split("//")[1];
+			if (serverAddress.startsWith("wss"))
+				swagAddress = "https://" + swagAddress;
+			else if (serverAddress.startsWith("ws"))
+				swagAddress = "http://" + swagAddress;
+
+			var http = new Http(swagAddress + "/online");
+
+			http.onData = function(data:String) {
+				callback(Std.parseInt(data));
+			}
+
+			http.onError = function(error) {
+				callback(0);
+			}
+
+			http.request();
+		});
+	}
+
+	private static var ratingsData:Array<Rating> = Rating.loadDefault(); // from PlayState
+
+	public static function getPlayerAccuracyPercent(player:Player) {
+		var totalPlayed = player.sicks + player.goods + player.bads + player.shits + player.misses; // all the encountered notes
+		var totalNotesHit = 
+			(player.sicks * ratingsData[0].ratingMod) + 
+			(player.goods * ratingsData[1].ratingMod) + 
+			(player.bads * ratingsData[2].ratingMod) +
+			(player.shits * ratingsData[3].ratingMod)
+		;
+
+		if (totalPlayed == 0)
+			return 0.0;
+		
+		return CoolUtil.floorDecimal(Math.min(1, Math.max(0, totalNotesHit / totalPlayed)) * 100, 2);
 	}
 }

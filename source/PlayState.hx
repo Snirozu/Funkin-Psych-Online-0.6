@@ -2372,7 +2372,7 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	public function updateScore(miss:Bool = false)
+	public function updateScore(miss:Bool = false, ?skipRest:Bool = false)
 	{
 		var scoreTextObject = scoreTxt;
 		if (GameClient.isConnected()) {
@@ -2390,6 +2390,9 @@ class PlayState extends MusicBeatState
 			+ ' | Rating: ' + ratingName
 			+ (ratingName != '?' ? ' (${Highscore.floorDecimal(ratingPercent * 100, 2)}%) - $ratingFC' : '');
 		}
+
+		if (skipRest)
+			return;
 
 		if(ClientPrefs.scoreZoom && !miss && !cpuControlled)
 		{
@@ -4115,7 +4118,7 @@ class PlayState extends MusicBeatState
 			if (GameClient.isConnected()) {
 				FlxG.sound.playMusic(Paths.music('freakyMenu'));
 				GameClient.clearOnMessage();
-				MusicBeatState.switchState(new Room());
+				MusicBeatState.switchState(new online.states.PostGame());
 			}
 			else if (isStoryMode)
 			{
@@ -5676,6 +5679,21 @@ class PlayState extends MusicBeatState
 	function registerMessages() {
 		if (!GameClient.isConnected())
 			return;
+
+		GameClient.room.onMessage("ping", function(message) {
+			Waiter.put(() -> {
+				GameClient.send("pong");
+
+				updateScore(false, true);
+				updateScoreOpponent();
+			});
+		});
+
+		GameClient.room.onMessage("custom", function(message:Array<Dynamic>) {
+			Waiter.put(() -> {
+				callOnLuas('onMessage', message);
+			});
+		});
 
 		GameClient.room.onMessage("log", function(message) {
 			Waiter.put(() -> {

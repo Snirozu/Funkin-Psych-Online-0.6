@@ -181,4 +181,28 @@ class Rating
 	{
 		Reflect.setField(PlayState.instance, counter, Reflect.field(PlayState.instance, counter) + blah);
 	}
+
+	public static function loadDefault():Array<Rating> {
+		var ratingsData:Array<Rating> = [];
+		ratingsData.push(new Rating('sick')); // default rating
+
+		var rating:Rating = new Rating('good');
+		rating.ratingMod = 0.7;
+		rating.score = 200;
+		rating.noteSplash = false;
+		ratingsData.push(rating);
+
+		var rating:Rating = new Rating('bad');
+		rating.ratingMod = 0.4;
+		rating.score = 100;
+		rating.noteSplash = false;
+		ratingsData.push(rating);
+
+		var rating:Rating = new Rating('shit');
+		rating.ratingMod = 0;
+		rating.score = 50;
+		rating.noteSplash = false;
+		ratingsData.push(rating);
+		return ratingsData;
+	}
 }

@@ -1,10 +1,5 @@
 package online.states;
 
-import flixel.FlxG;
-import flixel.util.FlxColor;
-import flixel.FlxSprite;
-import flixel.group.FlxSpriteGroup;
-import flixel.text.FlxText;
 import flixel.FlxObject;
 import io.colyseus.Client.RoomAvailable;
 import lime.app.Application;
@@ -29,6 +24,13 @@ class FindRoom extends MusicBeatState {
 		bg.scrollFactor.set(0, 0);
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
+
+		var lines:FlxSprite = new FlxSprite().loadGraphic(Paths.image('coolLines'));
+		lines.updateHitbox();
+		lines.screenCenter();
+		lines.antialiasing = ClientPrefs.globalAntialiasing;
+		lines.scrollFactor.set(0, 0);
+		add(lines);
         
 		swagRooms = new FlxTypedSpriteGroup<RoomText>();
 		add(swagRooms);
@@ -80,7 +82,7 @@ class FindRoom extends MusicBeatState {
 		GameClient.getAvailableRooms((err, rooms) -> {
             Waiter.put(() -> {
                 if (err != null) {
-					FlxG.switchState(new MainMenuState());
+					FlxG.switchState(new Lobby());
 					FlxG.sound.play(Paths.sound('cancelMenu'));
 					Alert.alert("Couldn't connect!", "ERROR: " + err.code + " - " + err.message + (err.code == 0 ? "\nTry again in a few minutes! The server is probably restarting!" : ""));
                     return;

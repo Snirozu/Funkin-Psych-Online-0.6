@@ -1,10 +1,5 @@
 package online;
 
-import flixel.text.FlxText;
-import flixel.group.FlxSpriteGroup;
-import flixel.util.FlxColor;
-import flixel.FlxSprite;
-import flixel.FlxG;
 import flixel.util.FlxSpriteUtil;
 
 class ServerSettingsSubstate extends MusicBeatSubstate {

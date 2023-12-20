@@ -226,6 +226,10 @@ class FunkinLua {
 		set('buildTarget', 'unknown');
 		#end
 
+		Lua_helper.add_callback(lua, "sendMessage", function(value:Dynamic) {
+			online.GameClient.send("custom", value);
+		});
+
 		// custom substate
 		Lua_helper.add_callback(lua, "openCustomSubstate", function(name:String, pauseGame:Bool = false) {
 			if(pauseGame)
