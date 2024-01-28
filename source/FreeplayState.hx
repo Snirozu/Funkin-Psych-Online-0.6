@@ -331,7 +331,14 @@ class FreeplayState extends MusicBeatState
 				colorTween.cancel();
 			}
 			FlxG.sound.play(Paths.sound('cancelMenu'));
-			MusicBeatState.switchState(new MainMenuState());
+			if (GameClient.isConnected()) {
+				destroyFreeplayVocals();
+				GameClient.clearOnMessage();
+				MusicBeatState.switchState(new Room());
+			}
+			else {
+				MusicBeatState.switchState(new MainMenuState());
+			}
 		}
 
 		if(ctrl)
@@ -343,25 +350,31 @@ class FreeplayState extends MusicBeatState
 		{
 			if(instPlaying != curSelected)
 			{
-				#if PRELOAD_ALL
-				destroyFreeplayVocals();
-				FlxG.sound.music.volume = 0;
-				Paths.currentModDirectory = songs[curSelected].folder;
-				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-				PlayState.SONG = Song.loadFromJson(poop, songs[curSelected].songName.toLowerCase());
-				if (PlayState.SONG.needsVoices)
-					vocals = new FlxSound().loadEmbedded(Paths.voices(PlayState.SONG.song));
-				else
-					vocals = new FlxSound();
+				try {
+					#if PRELOAD_ALL
+					destroyFreeplayVocals();
+					FlxG.sound.music.volume = 0;
+					Paths.currentModDirectory = songs[curSelected].folder;
+					var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
+					PlayState.SONG = Song.loadFromJson(poop, songs[curSelected].songName.toLowerCase());
+					if (PlayState.SONG.needsVoices)
+						vocals = new FlxSound().loadEmbedded(Paths.voices(PlayState.SONG.song));
+					else
+						vocals = new FlxSound();
 
-				FlxG.sound.list.add(vocals);
-				FlxG.sound.playMusic(Paths.inst(PlayState.SONG.song), 0.7);
-				vocals.play();
-				vocals.persist = true;
-				vocals.looped = true;
-				vocals.volume = 0.7;
-				instPlaying = curSelected;
-				#end
+					FlxG.sound.list.add(vocals);
+					FlxG.sound.playMusic(Paths.inst(PlayState.SONG.song), 0.7);
+					vocals.play();
+					vocals.persist = true;
+					vocals.looped = true;
+					vocals.volume = 0.7;
+					instPlaying = curSelected;
+					#end
+				}
+				catch (e) {
+					trace('ERROR! $e');
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+				}
 			}
 		}
 
@@ -390,14 +403,20 @@ class FreeplayState extends MusicBeatState
 				});
 				Paths.currentModDirectory = songs[curSelected].folder;
 				trace('Song mod directory: "${Paths.currentModDirectory}"');
-				GameClient.send("setFSD", [
-					songLowercase,
-					poop,
-					curDifficulty,
-					Md5.encode(Song.loadRawSong(poop, songLowercase)),
-					Paths.currentModDirectory,
-					online.OnlineMods.getModURL(Paths.currentModDirectory)
-				]);
+				try {
+					GameClient.send("setFSD", [
+						songLowercase,
+						poop,
+						curDifficulty,
+						Md5.encode(Song.loadRawSong(poop, songLowercase)),
+						Paths.currentModDirectory,
+						online.OnlineMods.getModURL(Paths.currentModDirectory)
+					]);
+				}
+				catch (e) {
+					trace('ERROR! $e');
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+				}
 			}
 			else {
 				/*#if MODS_ALLOWED

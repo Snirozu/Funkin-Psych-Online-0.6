@@ -60,8 +60,13 @@ class ClientPrefs {
 	public static var goodWindow:Int = 90;
 	public static var badWindow:Int = 135;
 	public static var safeFrames:Float = 10;
+	//ONLINE
 	public static var nickname:String = "Boyfriend";
 	public static var serverAddress:String = null;
+	public static var modSkin:Array<String> = null;
+	public static var trustedSources:Array<String> = ["https://gamebanana.com/"];
+	public static var comboOffsetOP1:Array<Int> = [0, 0, 0, 0];
+	public static var comboOffsetOP2:Array<Int> = [0, 0, 0, 0];
 
 	//Every key has two binds, add your key bind down here and then add your control on options/ControlsSubState.hx and Controls.hx
 	public static var keyBinds:Map<String, Array<FlxKey>> = [
@@ -134,6 +139,10 @@ class ClientPrefs {
 		FlxG.save.data.comboStacking = comboStacking;
 		FlxG.save.data.nickname = nickname;
 		FlxG.save.data.serverAddress = serverAddress;
+		FlxG.save.data.modSkin = modSkin;
+		FlxG.save.data.trustedSources = trustedSources;
+		FlxG.save.data.comboOffsetOP1 = comboOffsetOP1;
+		FlxG.save.data.comboOffsetOP2 = comboOffsetOP2;
 	
 		FlxG.save.flush();
 
@@ -276,6 +285,18 @@ class ClientPrefs {
 
 		if (FlxG.save.data.serverAddress != null)
 			serverAddress = FlxG.save.data.serverAddress;
+
+		if (FlxG.save.data.modSkin != null)
+			modSkin = FlxG.save.data.modSkin;
+
+		if (FlxG.save.data.trustedSources != null)
+			trustedSources = FlxG.save.data.trustedSources;
+
+		if (FlxG.save.data.comboOffsetOP1 != null)
+			comboOffsetOP1 = FlxG.save.data.comboOffsetOP1;
+
+		if (FlxG.save.data.comboOffsetOP2 != null)
+			comboOffsetOP2 = FlxG.save.data.comboOffsetOP2;
 
 		var save:FlxSave = new FlxSave();
 		save.bind('controls_v2', 'ninjamuffin99');

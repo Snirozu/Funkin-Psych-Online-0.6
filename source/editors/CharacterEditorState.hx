@@ -3,6 +3,7 @@ package editors;
 #if desktop
 import Discord.DiscordClient;
 #end
+import online.states.SkinsState;
 import animateatlas.AtlasFrameMaker;
 import flixel.FlxG;
 import flixel.FlxObject;
@@ -55,13 +56,15 @@ class CharacterEditorState extends MusicBeatState
 	var curAnim:Int = 0;
 	var daAnim:String = 'spooky';
 	var goToPlayState:Bool = true;
+	var goToSkins:Bool = true;
 	var camFollow:FlxObject;
 
-	public function new(daAnim:String = 'spooky', goToPlayState:Bool = true)
+	public function new(daAnim:String = 'spooky', goToPlayState:Bool = true, ?goToSkins:Bool = false)
 	{
 		super();
 		this.daAnim = daAnim;
 		this.goToPlayState = goToPlayState;
+		this.goToSkins = goToSkins;
 	}
 
 	var UI_box:FlxUITabMenu;
@@ -1115,7 +1118,10 @@ class CharacterEditorState extends MusicBeatState
 
 		if(!charDropDown.dropPanel.visible) {
 			if (FlxG.keys.justPressed.ESCAPE) {
-				if(goToPlayState) {
+				if (goToSkins) {
+					MusicBeatState.switchState(new SkinsState());
+				}
+				else if(goToPlayState) {
 					MusicBeatState.switchState(new PlayState());
 				} else {
 					MusicBeatState.switchState(new editors.MasterEditorMenu());

@@ -3,7 +3,7 @@ package online;
 #if !macro
 // Discord API
 #if desktop
-import Discord.DiscordClient as Discord;
+import Discord.DiscordClient as DiscordClient;
 #end
 // Psych
 #if LUA_ALLOWED
@@ -29,6 +29,8 @@ import flixel.group.FlxSpriteGroup;
 import flixel.group.FlxGroup.FlxTypedGroup;
 
 import Conductor.Rating;
+
+import Paths as Mods;
 
 using StringTools;
 #end

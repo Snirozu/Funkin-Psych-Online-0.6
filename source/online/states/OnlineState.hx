@@ -5,19 +5,12 @@ import haxe.Json;
 import openfl.events.KeyboardEvent;
 import flixel.addons.text.FlxTextField;
 
-class Lobby extends MusicBeatState {
+class OnlineState extends MusicBeatState {
 	var items:FlxTypedSpriteGroup<FlxText>;
 
 	var itms:Array<String> = [
-        "JOIN",
-        "HOST",
-        "FIND",
-		"NAME",
-		"SERVER",
-		"MODS",
-		"DISCORD",
-		"WIKI"
-    ];
+		"JOIN", "HOST", "FIND", "NAME", "SERVER", "MOD DOWNLOADER", "SKINS", "SETUP MODS", "DISCORD", "WIKI"
+	];
 
 	var itemDesc:FlxText;
 	var playersOnline:FlxText;
@@ -26,6 +19,7 @@ class Lobby extends MusicBeatState {
 
 	var inputWait = false;
 	var inputString(get, set):String;
+
 	function get_inputString():String {
 		switch (curSelected) {
 			case 0:
@@ -37,6 +31,7 @@ class Lobby extends MusicBeatState {
 		}
 		return null;
 	}
+
 	function set_inputString(v) {
 		switch (curSelected) {
 			case 0:
@@ -58,15 +53,14 @@ class Lobby extends MusicBeatState {
 	var selectLine:FlxSprite;
 	var descBox:FlxSprite;
 
-    function onRoomJoin() {
+	function onRoomJoin() {
 		Waiter.put(() -> {
 			MusicBeatState.switchState(new Room());
 		});
-    }
+	}
 
 	function getItemName(item:String) {
-		if (curSelected == 0 && item == "JOIN" && inputWait)
-		{
+		if (curSelected == 0 && item == "JOIN" && inputWait) {
 			return "JOIN CODE: " + inputString;
 		}
 		if (curSelected == 3 && item.toLowerCase().startsWith("name") && inputWait) {
@@ -78,30 +72,32 @@ class Lobby extends MusicBeatState {
 		return item;
 	}
 
-    override function create() {
-        super.create();
+	override function create() {
+		super.create();
 
+		if (FreeplayState.vocals != null)
+			FreeplayState.vocals.destroy();
 		if (FlxG.sound.music == null || !FlxG.sound.music.playing)
 			FlxG.sound.playMusic(Paths.music('freakyMenu'));
 
 		OnlineMods.checkMods();
 
-		Discord.changePresence("In online lobby.", null, null, false);
+		DiscordClient.changePresence("In online lobby.", null, null, false);
 
-		daName = ClientPrefs.nickname;
+		daName = Wrapper.prefNickname;
 		daAddress = GameClient.serverAddress;
 
-        var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-        bg.color = 0xff6f2d83;
-        bg.updateHitbox();
-        bg.screenCenter();
-        bg.antialiasing = ClientPrefs.globalAntialiasing;
-        add(bg);
+		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg.color = 0xff412664;
+		bg.updateHitbox();
+		bg.screenCenter();
+		bg.antialiasing = Wrapper.prefAntialiasing;
+		add(bg);
 
 		var lines:FlxSprite = new FlxSprite().loadGraphic(Paths.image('coolLines'));
 		lines.updateHitbox();
 		lines.screenCenter();
-		lines.antialiasing = ClientPrefs.globalAntialiasing;
+		lines.antialiasing = Wrapper.prefAntialiasing;
 		add(lines);
 
 		selectLine = new FlxSprite();
@@ -109,28 +105,33 @@ class Lobby extends MusicBeatState {
 		selectLine.alpha = 0.3;
 		add(selectLine);
 
-		descBox = new FlxSprite(0, FlxG.height - 150);
+		descBox = new FlxSprite(0, FlxG.height - 125);
 		descBox.makeGraphic(1, 1, FlxColor.BLACK);
 		descBox.alpha = 0.4;
 		add(descBox);
 
-        items = new FlxTypedSpriteGroup<FlxText>();
+		items = new FlxTypedSpriteGroup<FlxText>();
 		var prevText:FlxText = null;
-        var i = 0;
-        for (itm in itms) {
+		var i = 0;
+		for (itm in itms) {
 			var text = new FlxText(0, 0, 0, getItemName(itm));
 			if (prevText != null) {
 				text.y += prevText.height * i;
 			}
-            text.ID = i;
+			text.ID = i;
 			text.setFormat("VCR OSD Mono", 40, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			text.alpha = inputWait ? 0.5 : 0.8;
+			if (text.ID == curSelected) {
+				text.text = "> " + text.text + " <";
+				text.alpha = 1;
+			}
 			items.add(prevText = text);
 			i++;
-        }
+		}
 		items.screenCenter(Y);
-        add(items);
+		add(items);
 
-		itemDesc = new FlxText(0, FlxG.height - 150);
+		itemDesc = new FlxText(0, FlxG.height - 125);
 		itemDesc.setFormat("VCR OSD Mono", 25, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		itemDesc.screenCenter(X);
 		add(itemDesc);
@@ -140,20 +141,26 @@ class Lobby extends MusicBeatState {
 		playersOnline.alpha = 0.7;
 		add(playersOnline);
 
+		changeSelection(0);
+
 		GameClient.getPlayerCount((v) -> {
-			if (playersOnline == null)
-				return;
-			
-			playersOnline.text = "Players Online: " + v;
+			if (v == null) {
+				playersOnline.text = "OFFLINE";
+				// thought this would look cool
+				// playersOnline.applyMarkup("$•$ OFFLINE $•$", [new FlxTextFormatMarkerPair(new FlxTextFormat(FlxColor.GRAY), "$")]);
+			}
+			else {
+				playersOnline.text = 'Players Online: $v';
+				// playersOnline.applyMarkup("$•$ Players Online: " + v + " $•$", [new FlxTextFormatMarkerPair(new FlxTextFormat(FlxColor.GREEN), "$")]);
+			}
+
 			playersOnline.screenCenter(X);
 		});
 
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
 		FlxG.mouse.visible = true;
-
-		changeSelection(0);
-    }
+	}
 
 	override function destroy() {
 		super.destroy();
@@ -161,20 +168,21 @@ class Lobby extends MusicBeatState {
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 	}
 
-    override function update(elapsed) {
-        super.update(elapsed);
+	override function update(elapsed) {
+		super.update(elapsed);
+
+		if (disableInput)
+			return;
 
 		for (item in items) {
 			item.text = getItemName(itms[item.ID]);
 			item.alpha = inputWait ? 0.5 : 0.8;
-            if (item.ID == curSelected) {
+			if (item.ID == curSelected) {
 				item.text = "> " + item.text + " <";
 				item.alpha = 1;
-            }
-            item.screenCenter(X);
-        }
-
-        if (disableInput) return;
+			}
+			item.screenCenter(X);
+		}
 
 		var mouseInItems = FlxG.mouse.y > items.y && FlxG.mouse.y < items.y + items.members.length * 40;
 
@@ -204,11 +212,15 @@ class Lobby extends MusicBeatState {
 						inputWait = true;
 					case "find":
 						// FlxG.openURL(GameClient.serverAddress + "/rooms");
-						FlxG.switchState(new FindRoom());
+						MusicBeatState.switchState(new FindRoom());
 					case "host":
 						GameClient.createRoom(onRoomJoin);
-					case "mods":
-						FlxG.switchState(new SetupMods(Paths.getModDirectories()));
+					case "mod downloader":
+						MusicBeatState.switchState(new BananaDownload());
+					case "skins":
+						LoadingState.loadAndSwitchState(new SkinsState());
+					case "setup mods":
+						MusicBeatState.switchState(new SetupMods(Mods.getModDirectories()));
 					case "discord":
 						FlxG.openURL("https://discord.gg/juHypjWuNc");
 					case "wiki":
@@ -226,13 +238,13 @@ class Lobby extends MusicBeatState {
 				FlxG.sound.play(Paths.sound('cancelMenu'));
 				MusicBeatState.switchState(new MainMenuState());
 			}
-			
+
 			if (FlxG.keys.pressed.CONTROL && FlxG.keys.justPressed.V) {
 				GameClient.joinRoom(Clipboard.text, onRoomJoin);
 			}
 		}
-    }
-	
+	}
+
 	function changeSelection(diffe:Int) {
 		curSelected += diffe;
 
@@ -255,26 +267,41 @@ class Lobby extends MusicBeatState {
 			case 4:
 				itemDesc.text = "Set the server address here!\nSet to empty if you want to use the default server\nSet to 'ws://localhost:2567' if you're playing in LAN";
 			case 5:
-				itemDesc.text = "Set URLs for your mods here!";
+				itemDesc.text = "Download mods from Gamebanana here!";
 			case 6:
-				itemDesc.text = "Also join the Discord server of this mod!";
+				itemDesc.text = "Select your skin here!";
 			case 7:
+				itemDesc.text = "Set URLs for your mods here!";
+			case 8:
+				itemDesc.text = "Also join the Discord server of this mod!";
+			case 9:
 				itemDesc.text = "Documentation, Tips, FAQ etc.";
 		}
 		itemDesc.screenCenter(X);
 
 		descBox.scale.set(FlxG.width - 100, (itemDesc.text.split("\n").length + 2) * (itemDesc.size));
-		descBox.y = (FlxG.height - 150) + descBox.scale.y * 0.5 - itemDesc.size;
+		descBox.y = (FlxG.height - 125) + descBox.scale.y * 0.5 - itemDesc.size;
 		descBox.screenCenter(X);
-		
+
 		selectLine.y = (items.y + 20) + (curSelected) * 40;
 		selectLine.scale.set(FlxG.width, 40);
 		selectLine.screenCenter(X);
+
+		for (item in items) {
+			item.text = getItemName(itms[item.ID]);
+			item.alpha = inputWait ? 0.5 : 0.8;
+			if (item.ID == curSelected) {
+				item.text = "> " + item.text + " <";
+				item.alpha = 1;
+			}
+			item.screenCenter(X);
+		}
 	}
 
-    // some code from FlxInputText
+	// some code from FlxInputText
 	function onKeyDown(e:KeyboardEvent) {
-		if (!inputWait) return;
+		if (!inputWait)
+			return;
 
 		var key = e.keyCode;
 
@@ -282,38 +309,38 @@ class Lobby extends MusicBeatState {
 			return;
 		}
 
-		if (key == 46) { //delete
-            return;
-        }
+		if (key == 46) { // delete
+			return;
+		}
 
-		if (key == 8) { //bckspc
+		if (key == 8) { // bckspc
 			inputString = inputString.substring(0, inputString.length - 1);
-            return;
-        }
-		else if (key == 13) { //enter
+			return;
+		}
+		else if (key == 13) { // enter
 			enterInput();
-            return;
-        }
-		else if (key == 27) { //esc
+			return;
+		}
+		else if (key == 27) { // esc
 			inputWait = false;
 			tempDisableInput();
 			if (curSelected == 3) {
-				ClientPrefs.nickname = daName;
+				Wrapper.prefNickname = daName;
 				ClientPrefs.saveSettings();
 			}
 			if (curSelected == 4) {
 				GameClient.serverAddress = daAddress;
 			}
-            return;
-        }
+			return;
+		}
 
 		var newText:String = String.fromCharCode(e.charCode);
 		if ((curSelected == 0 && !e.shiftKey) || (curSelected != 0 && e.shiftKey)) {
 			newText = newText.toUpperCase();
-        }
-        else {
+		}
+		else {
 			newText = newText.toLowerCase();
-        }
+		}
 
 		if (key == 86 && e.ctrlKey) {
 			newText = Clipboard.text;
@@ -322,7 +349,7 @@ class Lobby extends MusicBeatState {
 		if (newText.length > 0) {
 			inputString += newText;
 		}
-    }
+	}
 
 	function enterInput() {
 		inputWait = false;
@@ -333,7 +360,7 @@ class Lobby extends MusicBeatState {
 					GameClient.joinRoom(daCoomCode, onRoomJoin);
 			}
 			if (curSelected == 3) {
-				ClientPrefs.nickname = daName;
+				Wrapper.prefNickname = daName;
 				ClientPrefs.saveSettings();
 			}
 			if (curSelected == 4) {
@@ -344,8 +371,8 @@ class Lobby extends MusicBeatState {
 		tempDisableInput();
 	}
 
-    function tempDisableInput() {
+	function tempDisableInput() {
 		disableInput = true;
-        new FlxTimer().start(0.1, (t) -> disableInput = false);
-    }
+		new FlxTimer().start(0.1, (t) -> disableInput = false);
+	}
 }

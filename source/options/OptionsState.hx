@@ -33,6 +33,7 @@ class OptionsState extends MusicBeatState
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
+	public static var onOnlineRoom:Bool = false;
 
 	function openSelectedSubstate(label:String) {
 		switch(label) {
@@ -106,7 +107,10 @@ class OptionsState extends MusicBeatState
 
 		if (controls.BACK) {
 			FlxG.sound.play(Paths.sound('cancelMenu'));
-			MusicBeatState.switchState(new MainMenuState());
+			if (onOnlineRoom)
+				LoadingState.loadAndSwitchState(new online.states.Room());
+			else 
+				MusicBeatState.switchState(new MainMenuState());
 		}
 
 		if (controls.ACCEPT) {

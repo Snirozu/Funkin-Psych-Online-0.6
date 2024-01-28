@@ -359,7 +359,7 @@ class Paths
 			localTrackedAssets.push(path);
 			return currentTrackedAssets.get(path);
 		}
-		trace('oh no its returning null NOOOO');
+		
 		return null;
 	}
 
@@ -509,4 +509,35 @@ class Paths
 		return list;
 	}
 	#end
+
+	inline public static function parseList():ModsList {
+		var list:ModsList = {enabled: [], disabled: [], all: []};
+
+		#if MODS_ALLOWED
+		try {
+			for (mod in CoolUtil.coolTextFile('modsList.txt')) {
+				// trace('Mod: $mod');
+				if (mod.trim().length < 1)
+					continue;
+
+				var dat = mod.split("|");
+				list.all.push(dat[0]);
+				if (dat[1] == "1")
+					list.enabled.push(dat[0]);
+				else
+					list.disabled.push(dat[0]);
+			}
+		}
+		catch (e) {
+			trace(e);
+		}
+		#end
+		return list;
+	}
 }
+
+typedef ModsList = {
+	enabled:Array<String>,
+	disabled:Array<String>,
+	all:Array<String>
+};

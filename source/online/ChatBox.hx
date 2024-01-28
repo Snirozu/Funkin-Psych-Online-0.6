@@ -8,9 +8,11 @@ import lime.system.Clipboard;
 // this class took me 2 days to make because my ass iz addicted to websites HELP
 class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 	public static var instance:ChatBox;
+
 	var prevMouseVisibility:Bool = false;
 
-    public var focused(default, set):Bool = false;
+	public var focused(default, set):Bool = false;
+
 	function set_focused(v) {
 		if (v) {
 			prevMouseVisibility = FlxG.mouse.visible;
@@ -28,20 +30,24 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 	var bg:FlxSprite;
 	var chatGroup:FlxTypedSpriteGroup<ChatMessage>;
 	var typeBg:FlxSprite;
-    var typeText:FlxText;
-    var typeTextHint:FlxText; // i can call it a hint or tip whatever i want
+	var typeText:FlxText;
+	var typeTextHint:FlxText; // i can call it a hint or tip whatever i want
 
 	var targetAlpha:Float;
 
-    public function new() {
+	var onCommand:(String, Array<String>) -> Bool;
+
+	public function new(camera:FlxCamera, ?onCommand:(command:String, args:Array<String>) -> Bool) {
+		super();
 		instance = this;
 
-        super();
-        
-        bg = new FlxSprite();
-        bg.makeGraphic(600, 400, FlxColor.BLACK);
+		this.onCommand = onCommand;
+		cameras = [camera];
+
+		bg = new FlxSprite();
+		bg.makeGraphic(600, 400, FlxColor.BLACK);
 		bg.alpha = 0.6;
-        add(bg);
+		add(bg);
 
 		typeTextHint = new FlxText(0, 0, bg.width, "(Type something to input the message, ACCEPT to send)");
 		typeTextHint.setFormat("VCR OSD Mono", 16, FlxColor.WHITE);
@@ -75,15 +81,17 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 					sond.pitch = 1.5;
 				});
 			});
-    }
+	}
 
 	override function destroy() {
 		super.destroy();
 
+		instance = null;
+
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 	}
 
-    public function addMessage(message:String) {
+	public function addMessage(message:String) {
 		targetAlpha = 3;
 
 		var chat = new ChatMessage(bg.width, message);
@@ -92,10 +100,14 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 		if (chatGroup.length >= 22) {
 			chatGroup.remove(chatGroup.members[chatGroup.length - 1], true);
 		}
-    }
+	}
 
-    override function update(elapsed) {
+	override function update(elapsed) {
 		if (focused || alpha > 0) {
+			if (FlxG.keys.justPressed.ESCAPE) {
+				focused = false;
+			}
+
 			var i = -1;
 			while (++i < chatGroup.length) {
 				var msg = chatGroup.members[i];
@@ -108,12 +120,15 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 				}
 
 				msg.alpha = 0.8;
-				if (msg != null && FlxG.mouse.visible && FlxG.mouse.overlaps(msg)) {
+				if (msg != null && FlxG.mouse.visible && FlxG.mouse.overlaps(msg, camera)) {
 					msg.alpha = 1;
 					if (FlxG.mouse.justPressed && msg.link != null) {
 						focused = false;
 						OpenURL.open(msg.link);
 					}
+				}
+				if (msg.alpha > targetAlpha) {
+					msg.alpha = targetAlpha;
 				}
 
 				var newClipRect = msg.clipRect ?? new FlxRect();
@@ -129,9 +144,9 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 		if (typeTextHint.alpha > 0.6)
 			typeTextHint.alpha = 0.6;
 
-        super.update(elapsed);
+		super.update(elapsed);
 
-		if (FlxG.keys.justPressed.TAB || FlxG.keys.justPressed.ESCAPE) {
+		if (FlxG.keys.justPressed.TAB) {
 			focused = !focused;
 		}
 
@@ -141,7 +156,7 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 			targetAlpha -= elapsed;
 
 		alpha = targetAlpha;
-    }
+	}
 
 	// some code from FlxInputText
 	function onKeyDown(e:KeyboardEvent) {
@@ -163,7 +178,14 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 			return;
 		}
 		else if (key == 13) { // enter
-			GameClient.send("chat", typeText.text);
+			if (StringTools.startsWith(typeText.text, "/"))
+				if (onCommand != null)
+					parseCommand(typeText.text);
+				else
+					addMessage("No available commands!");
+			else
+				GameClient.send("chat", typeText.text);
+
 			typeText.text = "";
 			return;
 		}
@@ -181,6 +203,18 @@ class ChatBox extends FlxTypedSpriteGroup<FlxSprite> {
 
 		if (newText.length > 0) {
 			typeText.text += newText;
+		}
+	}
+
+	function parseCommand(text:String) {
+		var splitText:Array<String> = text.split(" ");
+		var command = splitText.shift().substr(1);
+		if (!onCommand(command, splitText)) {
+			if (command == "/help") {
+				addMessage("No available commands!");
+				return;
+			}
+			addMessage("Unknown command; try /help for command list!");
 		}
 	}
 }

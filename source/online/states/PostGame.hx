@@ -3,7 +3,7 @@ package online.states;
 import online.schema.Player;
 
 class PostGame extends MusicBeatState {
-    var disableInput = true;
+	var disableInput = true;
 
 	var win:FlxSprite;
 	var winText:Alphabet;
@@ -21,10 +21,12 @@ class PostGame extends MusicBeatState {
 
 	var chatBox:ChatBox;
 
-    override function create() {
-        super.create();
-        
-        FlxG.sound.music.stop();
+	override function create() {
+		super.create();
+
+		DiscordClient.changePresence("Viewing song results.", null, null, false);
+
+		FlxG.sound.music.stop();
 
 		FlxG.sound.playMusic(Paths.music('breakfast'), 0);
 		FlxG.sound.music.fadeIn(2, 0, 0.5);
@@ -33,22 +35,22 @@ class PostGame extends MusicBeatState {
 		bg.color = 0xff353535;
 		bg.updateHitbox();
 		bg.screenCenter();
-		bg.antialiasing = ClientPrefs.globalAntialiasing;
+		bg.antialiasing = Wrapper.prefAntialiasing;
 		add(bg);
 
 		win = new FlxSprite();
-		win.antialiasing = ClientPrefs.globalAntialiasing;
+		win.antialiasing = Wrapper.prefAntialiasing;
 		win.frames = Paths.getSparrowAtlas('onlineJudges');
 		win.animation.addByPrefix('idle', "weiner", 24);
 		win.animation.play('idle');
 		win.updateHitbox();
 		win.screenCenter(X);
 		win.y = 25;
-        win.alpha = 0;
+		win.alpha = 0;
 		add(win);
 
 		winText = new Alphabet(0, 0, "", false);
-		winText.antialiasing = ClientPrefs.globalAntialiasing;
+		winText.antialiasing = Wrapper.prefAntialiasing;
 		winText.screenCenter(X);
 		winText.y = win.y + win.height + 10;
 		winText.scaleX = 0.55;
@@ -57,7 +59,7 @@ class PostGame extends MusicBeatState {
 		add(winText);
 
 		lose = new FlxSprite();
-		lose.antialiasing = ClientPrefs.globalAntialiasing;
+		lose.antialiasing = Wrapper.prefAntialiasing;
 		lose.frames = Paths.getSparrowAtlas('onlineJudges');
 		lose.animation.addByPrefix('idle', "loser", 24);
 		lose.animation.play('idle');
@@ -68,7 +70,7 @@ class PostGame extends MusicBeatState {
 		add(lose);
 
 		loseText = new Alphabet(0, 0, "", false);
-		loseText.antialiasing = ClientPrefs.globalAntialiasing;
+		loseText.antialiasing = Wrapper.prefAntialiasing;
 		loseText.screenCenter(X);
 		loseText.y = lose.y + lose.height + 10;
 		loseText.scaleX = 0.5;
@@ -77,7 +79,7 @@ class PostGame extends MusicBeatState {
 		add(loseText);
 
 		back = new FlxSprite();
-		back.antialiasing = ClientPrefs.globalAntialiasing;
+		back.antialiasing = Wrapper.prefAntialiasing;
 		back.frames = Paths.getSparrowAtlas('backspace');
 		back.animation.addByPrefix('idle', "backspace to exit white", 24);
 		back.animation.addByPrefix('black', "backspace to exit0", 24);
@@ -89,12 +91,14 @@ class PostGame extends MusicBeatState {
 		back.alpha = 0;
 		add(back);
 
-		chatBox = new ChatBox();
+		chatBox = new ChatBox(camera);
 		chatBox.y = FlxG.height - chatBox.height;
 		add(chatBox);
 
-		if (!GameClient.isConnected())
+		if (!GameClient.isConnected()) {
+			MusicBeatState.switchState(new OnlineState());
 			return;
+		}
 
 		p1Accuracy = GameClient.getPlayerAccuracyPercent(GameClient.room.state.player1);
 		p2Accuracy = GameClient.getPlayerAccuracyPercent(GameClient.room.state.player2);
@@ -104,34 +108,34 @@ class PostGame extends MusicBeatState {
 			loserAccuracy = p2Accuracy;
 			winner = GameClient.room.state.player1;
 			loser = GameClient.room.state.player2;
-        }
-        else {
+		}
+		else {
 			winnerAccuracy = p2Accuracy;
 			loserAccuracy = p1Accuracy;
 			winner = GameClient.room.state.player2;
 			loser = GameClient.room.state.player1;
-        }
+		}
 
 		winText.text = '${winner.name}\nAccuracy: ${winnerAccuracy}% - ${getCoolRating(winner)}\nMisses: ${winner.misses}\nScore: ${winner.score}';
 		loseText.text = '${loser.name}\nAccuracy: ${loserAccuracy}% - ${getCoolRating(loser)}\nMisses: ${loser.misses}\nScore: ${loser.score}';
 
 		winText.screenCenter(X);
 		loseText.screenCenter(X);
-		winText.y -= 35 + 60;
-		loseText.y -= 30 + 60;
+		winText.y -= 35;
+		loseText.y -= 30;
 		for (letter in winText.letters) {
 			if (letter != null) {
 				letter.colorTransform.redOffset = 230;
 				letter.colorTransform.greenOffset = 230;
 				letter.colorTransform.blueOffset = 230;
 			}
-        }
+		}
 		for (letter in loseText.letters) {
 			if (letter != null) {
 				letter.colorTransform.redOffset = 230;
 				letter.colorTransform.greenOffset = 230;
 				letter.colorTransform.blueOffset = 230;
-            }
+			}
 		}
 
 		FlxTween.tween(win, {alpha: 1}, 0.5, {ease: FlxEase.quadInOut});
@@ -144,35 +148,35 @@ class PostGame extends MusicBeatState {
 		new FlxTimer().start(5, (t) -> {
 			disableInput = false;
 		});
-    }
+	}
 
 	override function update(elapsed) {
-        super.update(elapsed);
+		super.update(elapsed);
 
 		if (!disableInput) {
 			if (back.animation.curAnim.name != "press")
 				back.animation.play('idle');
 
-			if (!chatBox.focused && !FlxG.keys.justPressed.TAB && controls.ACCEPT || controls.BACK || FlxG.keys.justPressed.BACKSPACE) {
+			if (!chatBox.focused && (!FlxG.keys.justPressed.TAB && controls.ACCEPT || controls.BACK || FlxG.keys.justPressed.BACKSPACE)) {
 				FlxG.sound.music.stop();
 				FlxG.sound.play(Paths.sound('cancelMenu'));
 
 				disableInput = true;
 				back.animation.play('press');
 				back.offset.set(20, 50);
-                new FlxTimer().start(0.5, (t) -> {
+				new FlxTimer().start(0.5, (t) -> {
 					GameClient.clearOnMessage();
 					MusicBeatState.switchState(new Room());
-                });
-            }
-        }
-        else {
+				});
+			}
+		}
+		else {
 			if (back.animation.curAnim.name != "press")
 				back.animation.play('black');
-        }
-    }
+		}
+	}
 
-    function getCoolRating(player:Player) {
+	function getCoolRating(player:Player) {
 		var ratingFC = 'Clear';
 		if (player.misses < 1) {
 			if (player.bads > 0 || player.shits > 0)
@@ -185,5 +189,5 @@ class PostGame extends MusicBeatState {
 		else if (player.misses < 10)
 			ratingFC = 'SDCB';
 		return ratingFC;
-    }
+	}
 }

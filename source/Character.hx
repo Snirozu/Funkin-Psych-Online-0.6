@@ -260,7 +260,7 @@ class Character extends FlxSprite
 	{
 		if(!debugMode && animation.curAnim != null)
 		{
-			if (isPlayer) {
+			if (PlayState.isCharacterPlayer(this)) {
 				if (animation.curAnim.name.startsWith('sing')) {
 					holdTimer += elapsed;
 				}
@@ -309,7 +309,7 @@ class Character extends FlxSprite
 					if(animation.curAnim.finished) playAnim(animation.curAnim.name, false, false, animation.curAnim.frames.length - 3);
 			}
 
-			if (!isPlayer)
+			if (!PlayState.isCharacterPlayer(this))
 			{
 				if (animation.curAnim.name.startsWith('sing'))
 				{
@@ -360,6 +360,15 @@ class Character extends FlxSprite
 		specialAnim = false;
 		animation.play(AnimName, Force, Reversed, Frame);
 
+		@:privateAccess
+		if (AnimName == null || animation._animations.get(AnimName) == null) {
+			Sys.println("No animation called \"" + AnimName + "\"");
+			if (AnimName != null && AnimName.endsWith("-alt")) {
+				playAnim(AnimName.substring(0, AnimName.length - "-alt".length), Force, Reversed);
+			}
+			return;
+		}
+
 		var daOffset = animOffsets.get(AnimName);
 		if (animOffsets.exists(AnimName))
 		{
@@ -367,9 +376,6 @@ class Character extends FlxSprite
 		}
 		else
 			offset.set(0, 0);
-
-		if (scale.x != 1. || scale.y != 1.)
-			updateHitbox();
 
 		if (curCharacter.startsWith('gf'))
 		{

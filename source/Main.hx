@@ -1,7 +1,5 @@
 package;
 
-import online.Waiter;
-import online.Alert;
 import flixel.graphics.FlxGraphic;
 import flixel.FlxG;
 import flixel.FlxGame;
@@ -107,13 +105,20 @@ class Main extends Sprite
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
 		#end
 
-		addChild(new Alert());
+		// ONLINE STUFF, BELOW CODE USE FOR BACKPORTING
 
-		FlxG.plugins.add(new Waiter());
+		online.Downloader.checkDeleteDlDir();
+
+		addChild(new online.Alert());
+		addChild(new online.DownloadAlert.DownloadAlerts());
+		addChild(new online.LoadingScreen());
+
+		FlxG.plugins.add(new online.Waiter());
 
 		// for some reason only cancels 2 downloads
 		Lib.application.window.onClose.add(() -> {
 			online.Downloader.cancelAll();
+			online.Downloader.checkDeleteDlDir();
 		});
 	}
 

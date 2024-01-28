@@ -1,6 +1,6 @@
 package;
 
-import online.states.Lobby;
+import online.states.OnlineState;
 #if desktop
 import Discord.DiscordClient;
 #end
@@ -26,7 +26,7 @@ using StringTools;
 
 class MainMenuState extends MusicBeatState
 {
-	public static var psychOnlineVersion:String = "0.3.2";
+	public static var psychOnlineVersion:String = "0.4.0";
 	public static var psychEngineVersion:String = '0.6.3'; //This is also used for Discord RPC
 	public static var curSelected:Int = 0;
 
@@ -256,8 +256,9 @@ class MainMenuState extends MusicBeatState
 										MusicBeatState.switchState(new CreditsState());
 									case 'options':
 										LoadingState.loadAndSwitchState(new options.OptionsState());
+										options.OptionsState.onOnlineRoom = false;
 									case 'online':
-										MusicBeatState.switchState(new Lobby());
+										MusicBeatState.switchState(new OnlineState());
 								}
 							});
 						}

@@ -13,22 +13,34 @@ import openfl.net.URLRequest;
 import openfl.events.Event;
 
 class Downloader {
-    public function new() {}
-
 	var stream:URLStream;
 	var fileStream:FileStream;
 	var id:String;
+	var fileName:String;
 	var gbMod:GBMod;
+
+	var downloadPath:String;
+
+	static var downloadDir:String = File.applicationDirectory.nativePath + "/downloads/";
+
+	var alert:DownloadAlert;
 
 	static var downloading:Array<String> = [];
 	static var downloaders:Array<Downloader> = [];
 
-	public function download(id:String, url:String, callback:(fileName:String)->Void, ?mod:GBMod) {		
+	public function new(fileName:String, id:String, url:String, callback:(fileName:String, downloader:Downloader) -> Void, ?mod:GBMod) {
+		this.fileName = idFilter(fileName);
 		id = idFilter(id);
 		if (downloading.contains(id)) {
+			// Waiter.put(() -> {
+			// 	Alert.alert('Downloading failed!', 'Download ' + id + " is already being downloaded!");
+			// });
+			return;
+		}
+		if (downloading.length >= 6) {
 			Waiter.put(() -> {
-				Alert.alert('Downloading failed!', 'Download ' + id + " is already being downloaded!");
-            });
+				Alert.alert('Downloading failed!', 'Too many files are downloading right now! (Max 6)');
+			});
 			return;
 		}
 		this.gbMod = mod;
@@ -38,11 +50,12 @@ class Downloader {
 		this.id = id;
 		downloaders.push(this);
 		downloading.push(id);
-		var fileName = id + ".dwl";
-
+		alert = new DownloadAlert(id);
+		checkCreateDlDir();
+		downloadPath = downloadDir + id + ".dwl";
 		fileStream = new FileStream();
-		fileStream.open(new File(File.applicationDirectory.nativePath + "/" + fileName), FileMode.WRITE);
-        
+		fileStream.open(new File(downloadPath), FileMode.WRITE);
+
 		var request = new URLRequest(url);
 		stream = new URLStream();
 
@@ -51,20 +64,25 @@ class Downloader {
 		});
 		stream.addEventListener(ProgressEvent.PROGRESS, (event) -> {
 			Waiter.put(() -> {
-				Alert.alert('Downloading...', id + ': ${FlxMath.roundDecimal(event.bytesLoaded / 1000000, 1)}MB of ${FlxMath.roundDecimal(event.bytesTotal / 1000000, 1)}MB');
-            });
+				alert.updateProgress(event.bytesLoaded, event.bytesTotal);
+			});
 			writeIncoming();
-        });
+		});
 		stream.addEventListener(Event.COMPLETE, (event) -> {
 			Sys.println('Download $id completed!');
 			writeIncoming();
 			fileStream.close();
 			stream.close();
-			callback(fileName);
+			callback(downloadPath, this);
+			deleteTempFile();
 			downloading.remove(id);
 			downloaders.remove(this);
-        });
+			alert.destroy();
+		});
 		stream.addEventListener(IOErrorEvent.IO_ERROR, (event) -> {
+			Waiter.put(() -> {
+				Alert.alert('Downloading failed!', id + ': ' + event.text);
+			});
 			Sys.println('Download $id encountered an exception!\n' + event.text);
 			cancel();
 		});
@@ -73,30 +91,55 @@ class Downloader {
 			stream.load(request);
 		}
 		catch (exc) {
-			fileStream.close();
-			stream.close();
-			downloading.remove(id);
-			downloaders.remove(this);
+			cancel();
 		}
-    }
+	}
 
-    function writeIncoming() {
+	public static function checkCreateDlDir() {
+		if (FileSystem.exists(downloadDir)) {
+			FileSystem.createDirectory(downloadDir);
+		}
+	}
+
+	public static function checkDeleteDlDir() {
+		if (FileSystem.exists(downloadDir)) {
+			FileUtils.removeFiles(downloadDir);
+		}
+	}
+
+	public function tryRenameFile():String {
+		if (FileSystem.exists(downloadPath)) {
+			if (FileSystem.exists(downloadDir + fileName))
+				FileSystem.deleteFile(downloadDir + fileName);
+			FileSystem.rename(downloadPath, downloadDir + fileName);
+		}
+		return downloadDir + fileName;
+	}
+
+	function deleteTempFile() {
+		if (FileSystem.exists(downloadPath)) {
+			FileSystem.deleteFile(downloadPath);
+		}
+	}
+
+	function writeIncoming() {
 		if (stream.bytesAvailable > 0) {
 			// get incoming bytes
 			var fileData:ByteArray = new ByteArray();
 			stream.readBytes(fileData, 0, stream.bytesAvailable);
-			// write them to the file
+			// write them to the file (doesn't do that, im studpi)
 			fileStream.writeBytes(fileData, 0, fileData.length);
-        }
-    }
+		}
+	}
 
 	public function cancel() {
 		Sys.println('Download $id cancelled!');
 		fileStream.close();
 		stream.close();
-		FileSystem.deleteFile(id + ".dwl");
+		deleteTempFile();
 		downloading.remove(id);
 		downloaders.remove(this);
+		alert.destroy();
 	}
 
 	public static function cancelAll() {
@@ -114,7 +157,7 @@ class Downloader {
 	static function isLetter(char:Int) {
 		return (char >= 65 && char <= 90) || /* A-Z */ (char >= 97 && char <= 122); // a-z
 	}
-	
+
 	public static function idFilter(id:String):String {
 		var filtered = "";
 		var i = -1;
@@ -123,7 +166,7 @@ class Downloader {
 			if (isNumber(char) || isLetter(char))
 				filtered += id.charAt(i);
 			else
-				filtered += "_";
+				filtered += "-";
 		}
 		return filtered;
 	}
