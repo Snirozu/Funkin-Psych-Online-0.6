@@ -67,6 +67,9 @@ class ClientPrefs {
 	public static var trustedSources:Array<String> = ["https://gamebanana.com/"];
 	public static var comboOffsetOP1:Array<Int> = [0, 0, 0, 0];
 	public static var comboOffsetOP2:Array<Int> = [0, 0, 0, 0];
+	public static var gapiRefreshToken:String = null;
+	public static var gapiAccessToken:String = null;
+	public static var gapiAccessExpires:Float = 0;
 
 	//Every key has two binds, add your key bind down here and then add your control on options/ControlsSubState.hx and Controls.hx
 	public static var keyBinds:Map<String, Array<FlxKey>> = [
@@ -297,6 +300,15 @@ class ClientPrefs {
 
 		if (FlxG.save.data.comboOffsetOP2 != null)
 			comboOffsetOP2 = FlxG.save.data.comboOffsetOP2;
+
+		if (FlxG.save.data.gapiRefreshToken != null)
+			gapiRefreshToken = FlxG.save.data.gapiRefreshToken;
+
+		if (FlxG.save.data.gapiAccessToken != null)
+			gapiAccessToken = FlxG.save.data.gapiAccessToken;
+
+		if (FlxG.save.data.gapiAccessExpires != null)
+			gapiAccessExpires = FlxG.save.data.gapiAccessExpires;
 
 		var save:FlxSave = new FlxSave();
 		save.bind('controls_v2', 'ninjamuffin99');

@@ -10,27 +10,78 @@ import openfl.display.Sprite;
 
 @:allow(online.DownloadAlert)
 class DownloadAlerts extends Sprite {
-	static var instance:DownloadAlerts;
+	static var instance:DownloadAlerts ;
 	static var instances:Array<DownloadAlert> = [];
 
 	public function new() {
 		super();
-
+		
 		instance = this;
 	}
 
 	override function __enterFrame(delta) {
 		super.__enterFrame(delta);
 
+		if (FlxG.keys.pressed.ALT) {
+			if (FlxG.keys.justPressed.ONE && Downloader.downloaders[0] != null)
+				Downloader.downloaders[0].cancel();
+			if (FlxG.keys.justPressed.TWO && Downloader.downloaders[1] != null)
+				Downloader.downloaders[1].cancel();
+			if (FlxG.keys.justPressed.THREE && Downloader.downloaders[2] != null)
+				Downloader.downloaders[2].cancel();
+			if (FlxG.keys.justPressed.FOUR && Downloader.downloaders[3] != null)
+				Downloader.downloaders[3].cancel();
+			if (FlxG.keys.justPressed.FIVE && Downloader.downloaders[4] != null)
+				Downloader.downloaders[4].cancel();
+			if (FlxG.keys.justPressed.SIX && Downloader.downloaders[5] != null)
+				Downloader.downloaders[5].cancel();
+			if (FlxG.keys.justPressed.SEVEN && Downloader.downloaders[6] != null)
+				Downloader.downloaders[6].cancel();
+			if (FlxG.keys.justPressed.EIGHT && Downloader.downloaders[7] != null)
+				Downloader.downloaders[7].cancel();
+			if (FlxG.keys.justPressed.NINE && Downloader.downloaders[8] != null)
+				Downloader.downloaders[8].cancel();
+		}
+
 		var prevAlert:DownloadAlert = null;
+		var i = 1;
 		for (alert in instances) {
-			if (prevAlert != null)
-				alert.y = prevAlert.y + prevAlert.bg.height + 10;
+			var downloader = Downloader.downloaders[i - 1];
+			if (downloader.cancelRequested) {
+				alert.cancelText.text = 'Cancelling...';
+			}
+			else {
+				alert.cancelText.text = 'Cancel: ALT + $i ';
+				if (i >= 10) {
+					alert.cancelText.text = "";
+				}
+			}
+
+			if (prevAlert?.bg != null)
+				alert.bg.y = prevAlert.bg.y + prevAlert.bg.height + 10;
 			else
-				alert.y = 0;
-			alert.x = Lib.application.window.width - alert.width;
+				alert.bg.y = 0;
+			alert.bg.x = Lib.application.window.width - alert.bg.width;
+			alert.text.x = alert.bg.x + 10;
+			alert.text.y = alert.bg.y;
+
+			alert.bar.y = alert.bg.y + alert.bg.height - 10;
+			alert.bar.x = alert.bg.x + 10;
+
+			alert.cancelText.width = alert.cancelText.textWidth;
+
+			alert.cancelBg.x = alert.bg.x - alert.cancelText.textWidth - 5;
+			alert.cancelBg.y = alert.bg.y;
+			alert.cancelText.x = alert.cancelBg.x;
+			alert.cancelText.y = alert.cancelBg.y;
+
+			alert.cancelBg.scaleX = alert.cancelText.textWidth;
+			alert.cancelBg.scaleY = alert.cancelText.textHeight + 5;
+			
+			alert.updateProgress(downloader.gotContent, downloader.contentLength);
 
 			prevAlert = alert;
+			i++;
 		}
 	}
 }
@@ -39,11 +90,13 @@ class DownloadAlert extends Sprite {
 	public var bg:Bitmap;
 	public var bar:Bitmap;
 	public var text:TextField;
-
 	var id:String;
 
-	public function new(id:String) {
-		super();
+	public var cancelBg:Bitmap;
+	public var cancelText:TextField;
+
+    public function new(id:String) {
+        super();
 
 		this.id = id;
 
@@ -52,7 +105,7 @@ class DownloadAlert extends Sprite {
 
 		bg = new Bitmap(new BitmapData(600, 70, true, 0xFF000000));
 		bg.alpha = 0.6;
-		addChild(bg);
+        addChild(bg);
 
 		bar = new Bitmap(new BitmapData(1, 5, true, 0xFFFFFFFF));
 		addChild(bar);
@@ -72,27 +125,50 @@ class DownloadAlert extends Sprite {
 		bar.x = 10;
 
 		bar.visible = false;
-	}
 
-	public function updateProgress(loaded:Float, total:Float) {
+		cancelBg = new Bitmap(new BitmapData(1, 1, true, 0xFF000000));
+		cancelBg.alpha = 0.5;
+		addChild(cancelBg);
+
+		cancelText = new TextField();
+		cancelText.text = 'Cancel: ALT + ' + Downloader.downloaders.length;
+		cancelText.selectable = false;
+		cancelText.defaultTextFormat = new TextFormat(Assets.getFont('assets/fonts/vcr.ttf').fontName, 13, 0xFFFFFFFF);
+		addChild(cancelText);
+    }
+
+    public function updateProgress(loaded:Float, total:Float) {
 		if (text == null)
 			return;
 
+		if (total < 0 || loaded > total) {
+			bar.visible = false;
+			bar.scaleX = 1;
+			total = 1;
+			text.text = 'Downloading $id: ${prettyBytes(loaded)} of ?MB';
+			return;
+		}
+		
 		bar.visible = true;
-		text.text = 'Downloading $id: ${FlxMath.roundDecimal(loaded / 1000000, 1)}MB of ${FlxMath.roundDecimal(total / 1000000, 1)}MB';
+		text.text = 'Downloading $id: ${prettyBytes(loaded)} of ${prettyBytes(total)}';
 
 		bar.scaleX = (bg.width - 20) * (loaded / total);
 		// bar.x = bg.x + bg.width / 2 - bar.width / 2;
+    }
+
+	public static function prettyBytes(bytes:Float):String {
+		if (bytes > 1000000000) {
+			return FlxMath.roundDecimal(bytes / 1000000000, 2) + "GB";
+		}
+		return FlxMath.roundDecimal(bytes / 1000000, 1) + "MB";
 	}
 
 	public function destroy() {
-		bg = null;
-		text = null;
 		DownloadAlerts.instances.remove(this);
-		DownloadAlerts.instance.removeChild(this);
-	}
-
-	override function __enterFrame(delta) {
-		super.__enterFrame(delta);
+		Waiter.put(() -> {
+			bg = null;
+			text = null;
+			DownloadAlerts.instance.removeChild(this);
+		});
 	}
 }

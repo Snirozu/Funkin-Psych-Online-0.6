@@ -1,5 +1,6 @@
 package online.states;
 
+import editors.CharacterEditorState;
 import haxe.io.Path;
 import sys.FileSystem;
 import flixel.group.FlxGroup;
@@ -16,6 +17,8 @@ class SkinsState extends MusicBeatState {
 
 	var charText:FlxText;
 	var charSelect:FlxText;
+
+	static var flipped:Bool = false;
 
     override function create() {
         super.create();
@@ -35,31 +38,32 @@ class SkinsState extends MusicBeatState {
 
 		var oldModDir = Mods.currentModDirectory;
 
-		characterList.set("default", new Character(0, 0, "default"));
-		charactersMod.set("default", null);
-		charactersName.set(i, "default");
+		var defaultName = !flipped ? "default" : "default-player";
+		characterList.set(defaultName, new Character(0, 0, defaultName, flipped));
+		charactersMod.set(defaultName, null);
+		charactersName.set(i, defaultName);
         i++;
 
-		for (mod in Paths.parseList().enabled) {
-			Paths.currentModDirectory = mod;
+		for (mod in Mods.parseList().enabled) {
+			Mods.currentModDirectory = mod;
 			var characters = Paths.mods(mod + '/characters/');
 			if (FileSystem.exists(characters)) {
 				for (file in FileSystem.readDirectory(characters)) {
 					var path = Path.join([characters, file]);
 					if (!sys.FileSystem.isDirectory(path) && file.endsWith('.json')) {
 						var character:String = file.substr(0, file.length - 5);
-                        if (character.endsWith("-player")) {
+						if (!flipped ? character.endsWith("-player") : !character.endsWith("-player")) {
                             continue;
                         }
 
-						if (FileSystem.exists(Path.join([characters, character + "-player.json"]))) {
-							characterList.set(character, new Character(0, 0, character));
+						if (FileSystem.exists(Path.join([characters, (!flipped ? character + "-player" : character.substring(0, character.length - "-player".length)) + ".json"]))) {
+							characterList.set(character, new Character(0, 0, character, flipped));
 							charactersMod.set(character, mod);
 							charactersName.set(i, character);
 
 							characterList.get(character).updateHitbox();
 
-							if (curCharacter == -1 && isEquiped(mod, character)) {
+							if (curCharacter == -1 && isEquiped(mod, !flipped ? character + "-player" : character.substring(0, character.length - "-player".length))) {
 								curCharacter = i;
 							}
 
@@ -106,7 +110,7 @@ class SkinsState extends MusicBeatState {
 		tip1.alpha = 0.6;
 		add(tip1);
 
-		var tip2 = new FlxText(-20, 0, FlxG.width, 'UI RIGHT - Switch to next');
+		var tip2 = new FlxText(-20, 0, FlxG.width, 'UI RIGHT - Switch to next\n9 - Flip skin');
 		tip2.setFormat("VCR OSD Mono", 20, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tip2.y = charText.y;
 		tip2.alpha = tip1.alpha;
@@ -153,17 +157,20 @@ class SkinsState extends MusicBeatState {
 					GameClient.send("setSkin", null);
 				}
 			}
-			MusicBeatState.switchState(GameClient.isConnected() ? new Room() : new OnlineState());
+			MusicBeatState.switchState(GameClient.isConnected() ? new Room() : new OptionsState());
         }
 
         if (controls.ACCEPT) {
-			if (charactersName.get(curCharacter) == "default")
+			var charName = charactersName.get(curCharacter);
+			charName = !flipped ? charName : charName.substring(0, charName.length - "-player".length);
+
+			if (charName == "default")
 				Wrapper.prefModSkin = null;
             else
-				Wrapper.prefModSkin = [charactersMod.get(charactersName.get(curCharacter)), charactersName.get(curCharacter)];
+				Wrapper.prefModSkin = [charactersMod.get(charactersName.get(curCharacter)), charName];
             ClientPrefs.saveSettings();
             
-			if (isEquiped(charactersMod.get(charactersName.get(curCharacter)), charactersName.get(curCharacter))) {
+			if (isEquiped(charactersMod.get(charactersName.get(curCharacter)), charName)) {
 				charSelect.text = 'Selected!';
 				charSelect.alpha = 1;
 			}
@@ -178,7 +185,12 @@ class SkinsState extends MusicBeatState {
 
 		if (FlxG.keys.justPressed.EIGHT) {
 			Mods.currentModDirectory = charactersMod.get(charactersName.get(curCharacter));
-			MusicBeatState.switchState(new editors.CharacterEditorState(charactersName.get(curCharacter), false, true));
+			MusicBeatState.switchState(new CharacterEditorState(charactersName.get(curCharacter), false, true));
+		}
+
+		if (FlxG.keys.justPressed.NINE) {
+			flipped = !flipped;
+			LoadingState.loadAndSwitchState(new SkinsState());
 		}
     }
 
@@ -202,7 +214,8 @@ class SkinsState extends MusicBeatState {
 			character.members[0].y = 600 - character.members[0].height;
 			charText.text = '< Character: $curCharName >';
 
-			if (isEquiped(charactersMod.get(curCharName), curCharName)) {
+			curCharName = !flipped ? curCharName : curCharName.substring(0, curCharName.length - "-player".length);
+			if (isEquiped(charactersMod.get(charactersName.get(curCharacter)), curCharName)) {
 				charSelect.text = 'Selected!';
 				charSelect.alpha = 1;
 			}
@@ -214,6 +227,9 @@ class SkinsState extends MusicBeatState {
     }
 
     function isEquiped(mod:String, skin:String) {
+		if (skin.endsWith("-player"))
+			skin = !flipped ? skin : skin.substring(0, skin.length - "-player".length);
+
 		if (skin == "default" && Wrapper.prefModSkin == null) {
             return true;
         }

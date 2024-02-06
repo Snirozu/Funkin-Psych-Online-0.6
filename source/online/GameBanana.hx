@@ -1,12 +1,12 @@
 package online;
 
+import online.states.RequestState;
 import openfl.utils.ByteArray;
 import openfl.display.PNGEncoderOptions;
 import openfl.geom.Rectangle;
 import openfl.display.BitmapData;
 import lime.system.System;
 import sys.thread.Thread;
-import online.states.OpenURL;
 import haxe.crypto.Md5;
 import haxe.zip.Entry;
 import sys.FileSystem;
@@ -134,7 +134,7 @@ class GameBanana {
 
 		if (daModUrl == null) {
 			Alert.alert("Failed to download!", "Unsupported file archive type!\n(Only ZIP, TAR, TGZ archives are supported!)");
-			OpenURL.open(mod.pageDownload, "The following mod needs to be installed from this source", null, null, true);
+			RequestState.requestURL(mod.pageDownload, "The following mod needs to be installed from this source", true);
 			return;
 		}
 

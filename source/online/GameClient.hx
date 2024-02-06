@@ -14,16 +14,16 @@ import io.colyseus.Client;
 import io.colyseus.Room;
 
 class GameClient {
-	public static var client:Client;
-	public static var room:Room<RoomState>;
-	public static var isOwner:Bool;
+    public static var client:Client;
+    public static var room:Room<RoomState>;
+    public static var isOwner:Bool;
 	public static var reconnectTries:Int = 0;
 
 	public static var serverAddress(get, set):String;
 
-	public static function createRoom(?onJoin:() -> Void) {
+    public static function createRoom(?onJoin:()->Void) {
 		LoadingScreen.toggle(true);
-
+		
 		Thread.create(() -> {
 			client = new Client(serverAddress);
 
@@ -32,12 +32,7 @@ class GameClient {
 					LoadingScreen.toggle(false);
 
 					if (err != null) {
-						Alert.alert("Couldn't connect!",
-							"ERROR: "
-							+ err.code
-							+ " - "
-							+ err.message
-							+ (err.code == 0 ? "\nTry again in a few minutes! The server is probably restarting!" : ""));
+						Alert.alert("Couldn't connect!", "ERROR: " + err.code + " - " + err.message + (err.code == 0 ? "\nTry again in a few minutes! The server is probably restarting!" : ""));
 						client = null;
 						return;
 					}
@@ -67,9 +62,9 @@ class GameClient {
 				});
 			});
 		});
-	}
+    }
 
-	public static function joinRoom(roomID:String, ?onJoin:() -> Void) {
+    public static function joinRoom(roomID:String, ?onJoin:()->Void) {
 		LoadingScreen.toggle(true);
 
 		Thread.create(() -> {
@@ -110,12 +105,12 @@ class GameClient {
 				});
 			});
 		});
-	}
+    }
 
 	public static function reconnect(?nextTry:Bool = false) {
 		leaveRoom("");
 		return;
-		// i give up on reconnection stuff, probably a colyseus bug
+		//i give up on reconnection stuff, probably a colyseus bug
 		// reconnection token invalid or expired?
 		// i literally give it infinite seconds to reconnect again?
 
@@ -124,7 +119,7 @@ class GameClient {
 		else {
 			reconnectTries = 5;
 		}
-
+		
 		client.reconnect(room.reconnectionToken, RoomState, (err, room) -> {
 			if (err != null) {
 				if (reconnectTries <= 0) {
@@ -171,7 +166,7 @@ class GameClient {
 		return options;
 	}
 
-	public static function getAvailableRooms(result:(MatchMakeError, Array<RoomAvailable>) -> Void) {
+	public static function getAvailableRooms(result:(MatchMakeError, Array<RoomAvailable>)->Void) {
 		Thread.create(() -> {
 			new Client(serverAddress).getAvailableRooms("room", result);
 		});
@@ -180,10 +175,10 @@ class GameClient {
 	public static function leaveRoom(?reason:String = null) {
 		if (!isConnected())
 			return;
-
+		
 		GameClient.client = null;
-
-		Waiter.put(() -> {
+		
+        Waiter.put(() -> {
 			if (reason != null)
 				Alert.alert("Disconnected!", reason.trim() != "" ? reason : null);
 			Sys.println("leaving the room");
@@ -197,18 +192,18 @@ class GameClient {
 			if (GameClient.room?.connection != null) {
 				GameClient.room.connection.close();
 				GameClient.room.teardown();
-			}
+            }
 
 			GameClient.room = null;
 			GameClient.isOwner = false;
 
-			// Downloader.cancelAll();
-		});
+			//Downloader.cancelAll();
+        });
 	}
 
-	public static function isConnected() {
+    public static function isConnected() {
 		return client != null;
-	}
+    }
 
 	@:access(io.colyseus.Room.onMessageHandlers)
 	public static function clearOnMessage() {
@@ -250,19 +245,25 @@ class GameClient {
 		return GameClient.isOwner || GameClient.room.state.anarchyMode;
 	}
 
-	static final _defaultAddress:String = #if LOCAL "ws://localhost:2567" #else "wss://gettinfreaky.onrender.com" #end;
+	public static final defaultAddress:String = 
+		#if LOCAL
+		"ws://localhost:2567"
+		#else
+		"wss://gettinfreaky.onrender.com"
+		#end
+	;
 
 	static function get_serverAddress():String {
 		if (Wrapper.prefServerAddress != null) {
 			return Wrapper.prefServerAddress;
 		}
-		return _defaultAddress;
+		return defaultAddress;
 	}
 
 	static function set_serverAddress(v:String):String {
 		if (v != null)
 			v = v.trim();
-		if (v == "" || v == _defaultAddress || v == "null")
+		if (v == "" || v == defaultAddress || v == "null")
 			v = null;
 
 		Wrapper.prefServerAddress = v;
@@ -270,15 +271,20 @@ class GameClient {
 		return serverAddress;
 	}
 
-	public static function getPlayerCount(callback:(v:Null<Int>) -> Void) {
-		Thread.create(() -> {
-			var swagAddress = serverAddress.split("//")[1];
-			if (serverAddress.startsWith("wss"))
-				swagAddress = "https://" + swagAddress;
-			else if (serverAddress.startsWith("ws"))
-				swagAddress = "http://" + swagAddress;
+	public static function addressToUrl(address:String) {
+		var copyAddress = address;
+		if (copyAddress.startsWith("wss://")) {
+			copyAddress = "https://" + copyAddress.substr("wss://".length);
+		}
+		else if (copyAddress.startsWith("ws://")) {
+			copyAddress = "http://" + copyAddress.substr("ws://".length);
+		}
+		return copyAddress;
+	}
 
-			var http = new Http(swagAddress + "/online");
+	public static function getPlayerCount(callback:(v:Null<Int>)->Void) {
+		Thread.create(() -> {
+			var http = new Http(addressToUrl(serverAddress) + "/api/online");
 
 			http.onData = function(data:String) {
 				Waiter.put(() -> {
@@ -300,12 +306,16 @@ class GameClient {
 
 	public static function getPlayerAccuracyPercent(player:Player) {
 		var totalPlayed = player.sicks + player.goods + player.bads + player.shits + player.misses; // all the encountered notes
-		var totalNotesHit = (player.sicks * ratingsData[0].ratingMod) + (player.goods * ratingsData[1].ratingMod) + (player.bads * ratingsData[2].ratingMod)
-			+ (player.shits * ratingsData[3].ratingMod);
+		var totalNotesHit = 
+			(player.sicks * ratingsData[0].ratingMod) + 
+			(player.goods * ratingsData[1].ratingMod) + 
+			(player.bads * ratingsData[2].ratingMod) +
+			(player.shits * ratingsData[3].ratingMod)
+		;
 
 		if (totalPlayed == 0)
 			return 0.0;
-
+		
 		return CoolUtil.floorDecimal(Math.min(1, Math.max(0, totalNotesHit / totalPlayed)) * 100, 2);
 	}
 }
