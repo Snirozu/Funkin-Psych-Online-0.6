@@ -44,7 +44,7 @@ class SkinsState extends MusicBeatState {
 		charactersName.set(i, defaultName);
         i++;
 
-		for (mod in Mods.parseList().enabled) {
+		for (mod in Mods.getModDirectories()) {
 			Mods.currentModDirectory = mod;
 			var characters = Paths.mods(mod + '/characters/');
 			if (FileSystem.exists(characters)) {
